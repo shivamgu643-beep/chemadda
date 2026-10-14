@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111827">
+<title>FileDrop — your files, one link away</title>
+<style>
+:root{color-scheme:light;--bg:#f4f6fb;--card:#fff;--ink:#182230;--muted:#667085;--line:#e4e7ec;--blue:#2563eb;--blue2:#1d4ed8;--green:#067647;--red:#b42318}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--ink)}
+header{background:#111827;color:#fff;padding:22px max(18px,calc((100vw - 1100px)/2));display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.brand{display:flex;gap:12px;align-items:center}.logo{display:grid;place-items:center;width:44px;height:44px;border-radius:13px;background:#2563eb;font-size:23px}.brand h1{margin:0;font-size:22px}.brand p{margin:0;color:#cbd5e1;font-size:13px}
+main{max-width:1100px;margin:26px auto;padding:0 16px 48px}.topline{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}.topline h2{margin:0;font-size:25px}.muted{color:var(--muted)}.small{font-size:12px}
+button,.button{border:0;border-radius:10px;padding:10px 14px;font:600 14px system-ui;cursor:pointer;background:var(--blue);color:white;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+button:hover,.button:hover{background:var(--blue2)}button:disabled{opacity:.5;cursor:not-allowed}.secondary{background:#eef2ff;color:#1d4ed8}.secondary:hover{background:#dbeafe}.danger{background:#fff1f0;color:var(--red);border:1px solid #fecdca}.danger:hover{background:#fee4e2}.plain{background:transparent;color:var(--ink);border:1px solid var(--line)}.plain:hover{background:#f9fafb}
+.grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);gap:18px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 2px 8px #10182808}.card h3{margin:0 0 6px;font-size:17px}.card p{margin:0 0 14px}.drop{border:2px dashed #b7c5dc;border-radius:14px;background:#f8faff;padding:26px 14px;text-align:center;cursor:pointer}.drop.drag{border-color:var(--blue);background:#eff6ff}.drop .cloud{font-size:32px}.drop strong{display:block;margin:5px 0}.drop input{display:none}
+.field{display:flex;flex-direction:column;gap:6px;margin:12px 0}.field label{font-size:13px;font-weight:650}.field input{border:1px solid #d0d5dd;border-radius:9px;padding:11px 12px;font:inherit;width:100%;background:white}.field input:focus{outline:2px solid #bfdbfe;border-color:var(--blue)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}.status{padding:10px 12px;border-radius:10px;background:#f2f4f7;color:#344054;font-size:13px;margin-top:12px;white-space:pre-wrap;overflow-wrap:anywhere}.status.good{background:#ecfdf3;color:#067647}.status.bad{background:#fef3f2;color:#b42318}
+.progress{height:8px;background:#eaecf0;border-radius:99px;overflow:hidden;margin-top:10px}.progress span{display:block;height:100%;width:0;background:var(--blue);transition:width .15s}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.toolbar input{flex:1;min-width:160px;border:1px solid #d0d5dd;border-radius:10px;padding:10px 12px;font:inherit}
+.filelist{display:flex;flex-direction:column}.file{display:flex;gap:12px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line);min-width:0}.file:last-child{border-bottom:0}.fileicon{width:42px;height:42px;display:grid;place-items:center;border-radius:11px;background:#eff6ff;font-size:20px;flex:none}.filemeta{min-width:0;flex:1}.filename{font-weight:650;overflow-wrap:anywhere}.fileinfo{font-size:12px;color:var(--muted)}.fileactions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.fileactions button{padding:7px 9px;font-size:12px}
+.notice{background:#fffaeb;border:1px solid #fedf89;color:#7a2e0e;padding:12px 14px;border-radius:12px;font-size:13px;margin:16px 0}.hidden{display:none!important}.empty{text-align:center;padding:34px 12px;color:var(--muted)}footer{max-width:1100px;margin:0 auto;padding:0 16px 28px;color:var(--muted);font-size:12px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}header{padding:16px}.card{padding:16px}.file{align-items:flex-start;flex-wrap:wrap}.fileactions{width:100%;padding-left:54px;justify-content:flex-start}.topline h2{font-size:22px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="logo">↗</div><div><h1>FileDrop</h1><p>Your files. One link away.</p></div></div>
+  <div class="actions"><button id="signin">Sign in with Google</button><button id="signout" class="plain hidden">Sign out</button></div>
+</header>
+<main>
+  <div class="topline"><div><h2>Your file library</h2><div id="account" class="muted small">Connect your Google Drive to begin.</div></div><button id="refresh" class="secondary" disabled>↻ Refresh</button></div>
+  <div class="notice"><strong>Privacy reminder:</strong> “Anyone with the link” means anyone who gets the URL can access that file. Only upload material you have the right to share. Public link sharing may be restricted by school/work accounts.</div>
+  <div class="grid">
+    <section class="card">
+      <h3>Upload files</h3><p class="muted small">Large files use resumable upload sessions. Keep this tab open while uploading.</p>
+      <div id="drop" class="drop" tabindex="0" role="button" aria-label="Choose files">
+        <div class="cloud">☁️</div><strong>Drop files here or choose files</strong><span class="muted small">PDF, DOCX, ZIP and other file types · up to Drive's limits</span>
+        <input id="files" type="file" multiple>
+      </div>
+      <div class="field"><label for="folder">Folder (optional)</label><input id="folder" placeholder="e.g. JEE / Physics / PYQs"></div>
+      <div class="actions"><button id="upload" disabled>Upload selected files</button><button id="clear" class="plain">Clear selection</button></div>
+      <div id="selected" class="muted small" style="margin-top:10px">No files selected.</div>
+      <div class="progress"><span id="bar"></span></div>
+      <div id="uploadstatus" class="status">Sign in, choose files, then upload.</div>
+    </section>
+    <section class="card">
+      <h3>Setup & connection</h3><p class="muted small">This is a static website. Your Google OAuth client ID is configured here and saved only in this browser.</p>
+      <div class="field"><label for="clientid">Google OAuth Client ID</label><input id="clientid" placeholder="123456789-abc.apps.googleusercontent.com" autocomplete="off"></div>
+      <div class="actions"><button id="saveconfig" class="secondary">Save client ID</button><button id="help" class="plain">Setup guide</button></div>
+      <div id="configstatus" class="status">A Google Cloud OAuth client ID is required before sign-in.</div>
+      <div class="small muted" style="margin-top:12px">Requested access: manage files created by FileDrop (drive.file). The app does not ask for your Google password.</div>
+    </section>
+  </div>
+  <section class="card" style="margin-top:18px">
+    <div class="topline" style="margin-bottom:0"><div><h3>Stored files</h3><p class="muted small">Files uploaded through this app. Share links are created on request.</p></div><span id="count" class="muted small">0 files</span></div>
+    <div class="toolbar"><input id="search" placeholder="Search files by name…" aria-label="Search files"><button id="refresh2" class="secondary" disabled>Refresh list</button></div>
+    <div id="filelist" class="filelist"><div class="empty">Connect Google Drive to list your FileDrop uploads.</div></div>
+  </section>
+  <section id="setup" class="card hidden" style="margin-top:18px">
+    <h3>Connect FileDrop to Google Drive</h3>
+    <ol>
+      <li>Open <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud Console</a> and create a project.</li>
+      <li>Under APIs & Services → Library, enable <strong>Google Drive API</strong>.</li>
+      <li>Configure OAuth consent / Google Auth Platform. For personal testing, add your Google account as a test user if the app is in Testing mode.</li>
+      <li>Create an OAuth Client ID of type <strong>Web application</strong>. Add this site's exact origin under <strong>Authorized JavaScript origins</strong> (for example, <code>http://localhost:8000</code> or your GitHub Pages origin). No client secret is needed in this browser app.</li>
+      <li>Paste the Client ID above and save it, then sign in.</li>
+      <li>To publish free: upload this folder to a GitHub repository and enable GitHub Pages in Settings → Pages. Add the published site's origin to the OAuth client. Or test locally using <code>python -m http.server 8000</code> and open <code>http://localhost:8000</code>.</li>
+    </ol>
+    <p class="muted small">Google can change its consent-screen rules. If public sharing is disabled by an account administrator, FileDrop cannot override that policy.</p>
+  </section>
+</main>
+<footer>FileDrop is an independent demo, not a Google product. The site code does not contain your Google credentials. Shared files remain in your Google Drive.</footer>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const API = 'https://www.googleapis.com/drive/v3';
+  const UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3/files';
+  let token = null, tokenClient = null, accountName = '', picked = [], files = [], busy = false;
+  const savedId = localStorage.getItem('filedrop_client_id') || '';
+  $('clientid').value = savedId;
+  $('setup').classList.add('hidden');
+  function status(id, message, kind='') { const el=$(id); el.textContent=message; el.className='status'+(kind?' '+kind:''); }
+  function formatBytes(n) { if(n===undefined||n===null||n==='') return '—'; n=Number(n); if(!Number.isFinite(n)) return '—'; const u=['B','KB','MB','GB','TB']; let i=0; while(n>=1024&&i<u.length-1){n/=1024;i++} return `${n.toFixed(i?1:0)} ${u[i]}`; }
+  function esc(s) { return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function setConnected(on) {
+    $('signin').classList.toggle('hidden',on); $('signout').classList.toggle('hidden',!on);
+    $('refresh').disabled=!on; $('refresh2').disabled=!on; $('upload').disabled=!on||!picked.length||busy;
+    $('account').textContent=on?`Connected${accountName?' as '+accountName:''} · Google Drive`:'Connect your Google Drive to begin.';
+  }
+  function loadGIS() {
+    if(!window.google?.accounts?.oauth2) return false;
+    const id=$('clientid').value.trim();
+    if(!id) { status('configstatus','Enter a Google OAuth Client ID first.','bad'); return false; }
+    tokenClient=google.accounts.oauth2.initTokenClient({client_id:id,scope:'https://www.googleapis.com/auth/drive.file',callback:async r=>{
+      if(r.error){status('configstatus','Sign-in failed: '+r.error,'bad');return}
+      token=r.access_token; setConnected(true); status('configstatus','Connected. Your access token stays in memory for this tab.','good');
+      await refreshFiles();
+    }});
+    return true;
+  }
+  $('signin').onclick=()=>{if(!loadGIS()) {status('configstatus','Google sign-in library is still loading, or the Client ID is missing. Wait a moment and try again.','bad');return} tokenClient.requestAccessToken({prompt:'consent'});};
+  $('signout').onclick=()=>{if(token&&window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(token,()=>{});token=null;tokenClient=null;files=[];renderFiles();setConnected(false);status('configstatus','Signed out.','');};
+  $('saveconfig').onclick=()=>{const id=$('clientid').value.trim();if(!id){status('configstatus','Paste a Google OAuth Client ID first.','bad');return}localStorage.setItem('filedrop_client_id',id);status('configstatus','Client ID saved in this browser. You can now sign in.','good');};
+  $('help').onclick=()=> $('setup').classList.toggle('hidden');
+  $('refresh').onclick=refreshFiles; $('refresh2').onclick=refreshFiles;
+  $('search').oninput=renderFiles;
+  $('drop').onclick=()=> $('files').click();
+  $('drop').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('files').click()}};
+  $('files').onchange=e=>{picked=[...e.target.files];showPicked();};
+  $('clear').onclick=()=>{picked=[];$('files').value='';showPicked();status('uploadstatus','Selection cleared.');$('bar').style.width='0%';};
+  $('drop').ondragover=e=>{e.preventDefault();$('drop').classList.add('drag')};
+  $('drop').ondragleave=()=> $('drop').classList.remove('drag');
+  $('drop').ondrop=e=>{e.preventDefault();$('drop').classList.remove('drag');picked=[...e.dataTransfer.files];showPicked();};
+  function showPicked(){ $('selected').textContent=picked.length?picked.map(f=>`${f.name} (${formatBytes(f.size)})`).join(' · '):'No files selected.'; $('upload').disabled=!token||!picked.length||busy; }
+  async function api(path, options={}) {
+    const res=await fetch(API+path,{...options,headers:{Authorization:'Bearer '+token,'Content-Type':'application/json',...(options.headers||{})}});
+    if(!res.ok){let msg=await res.text();throw new Error(`Drive API ${res.status}: ${msg.slice(0,350)}`)}
+    return res.status===204?null:res.json();
+  }
+  async function getOrCreateFolder(path) {
+    if(!path.trim()) return null;
+    let parent=null;
+    for(const name of path.split('/').map(s=>s.trim()).filter(Boolean)){
+      const q=`name = '${name.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`+(parent?` and '${parent}' in parents`:'');
+      const data=await api('/files?q='+encodeURIComponent(q)+'&pageSize=100&fields=files(id,name)');
+      let found=(data.files||[])[0];
+      if(!found){found=await api('/files',{method:'POST',body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder',...(parent?{parents:[parent]}:{})})});}
+      parent=found.id;
+    }
+    return parent;
+  }
+  async function uploadOne(file, parent, idx, total) {
+    const metadata={name:file.name,...(parent?{parents:[parent]}:{}),description:'Uploaded with FileDrop'};
+    const init=await fetch(UPLOAD_API+'?uploadType=resumable&fields=id,name,mimeType,size,modifiedTime,webViewLink,webContentLink',{
+      method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json; charset=UTF-8','X-Upload-Content-Type':file.type||'application/octet-stream','X-Upload-Content-Length':String(file.size)},body:JSON.stringify(metadata)
+    });
+    if(!init.ok) throw new Error(`Could not start upload (${init.status}): ${(await init.text()).slice(0,250)}`);
+    const url=init.headers.get('Location'); if(!url) throw new Error('Drive did not return a resumable upload URL.');
+    const chunkSize=8*1024*1024; let start=0, lastResult=null;
+    while(start<file.size){
+      const end=Math.min(start+chunkSize,file.size);
+      const response=await fetch(url,{method:'PUT',headers:{'Content-Length':String(end-start),'Content-Range':`bytes ${start}-${end-1}/${file.size}`,'Content-Type':file.type||'application/octet-stream'},body:file.slice(start,end)});
+      if(response.status===308){start=end;}
+      else if(response.ok){lastResult=await response.json();start=end;}
+      else {throw new Error(`Upload failed for ${file.name} (${response.status}): ${(await response.text()).slice(0,250)}`);}
+      const percent=Math.min(100,Math.round((idx+(start/file.size))/total*100));
+      $('bar').style.width=percent+'%';
+      status('uploadstatus',`Uploading ${idx+1}/${total}: ${file.name}\n${formatBytes(start)} of ${formatBytes(file.size)} sent · ${Math.round(start/file.size*100)}%`);
+    }
+    return lastResult;
+  }
+  $('upload').onclick=async()=>{
+    if(!token||!picked.length||busy)return;busy=true;showPicked();$('clear').disabled=true;
+    try{
+      const parent=await getOrCreateFolder($('folder').value);
+      const chosen=[...picked];
+      for(let i=0;i<chosen.length;i++){
+        const f=chosen[i];
+        status('uploadstatus',`Preparing ${i+1}/${chosen.length}: ${f.name}`);
+        const uploaded=await uploadOne(f,parent,i,chosen.length);
+        if(!uploaded?.id) throw new Error('Upload completed but no file ID was returned.');
+        status('uploadstatus',`Uploaded ${f.name}. Setting link access…`);
+        await api(`/files/${encodeURIComponent(uploaded.id)}/permissions`,{method:'POST',body:JSON.stringify({type:'anyone',role:'reader',allowFileDiscovery:false})});
+      }
+      picked=[];$('files').value='';showPicked();$('bar').style.width='100%';status('uploadstatus',`Done! ${chosen.length} file(s) uploaded and link sharing enabled.`,'good');await refreshFiles();
+    }catch(e){status('uploadstatus',e.message,'bad')}
+    finally{busy=false;$('clear').disabled=false;showPicked();}
+  };
+  async function refreshFiles(){
+    if(!token)return;
+    $('filelist').innerHTML='<div class="empty">Loading your files…</div>';
+    try{
+      let all=[],pageToken='';
+      do{
+        const q="trashed = false and mimeType != 'application/vnd.google-apps.folder'";
+        const params=new URLSearchParams({q,pageSize:'100',orderBy:'modifiedTime desc',fields:'nextPageToken,files(id,name,mimeType,size,modifiedTime,webViewLink,webContentLink)'});
+        if(pageToken)params.set('pageToken',pageToken);
+        const data=await api('/files?'+params.toString());all=all.concat(data.files||[]);pageToken=data.nextPageToken||'';
+      }while(pageToken);
+      files=all;renderFiles();
+    }catch(e){$('filelist').innerHTML=`<div class="empty">Could not load files: ${esc(e.message)}</div>`}
+  }
+  function renderFiles(){
+    const q=$('search').value.trim().toLowerCase();
+    const shown=files.filter(f=>f.name.toLowerCase().includes(q));
+    $('count').textContent=`${shown.length} file${shown.length===1?'':'s'}`;
+    if(!shown.length){$('filelist').innerHTML='<div class="empty">No files found. Upload something to get started.</div>';return}
+    $('filelist').innerHTML=shown.map(f=>{
+      const icon=f.mimeType==='application/pdf'?'📕':f.mimeType.includes('word')?'📝':'📄';
+      const date=f.modifiedTime?new Date(f.modifiedTime).toLocaleDateString(): '—';
+      const download=`https://drive.google.com/uc?export=download&id=${encodeURIComponent(f.id)}`;
+      return `<div class="file"><div class="fileicon">${icon}</div><div class="filemeta"><div class="filename">${esc(f.name)}</div><div class="fileinfo">${esc(formatBytes(f.size))} · Updated ${esc(date)}</div></div><div class="fileactions"><button class="secondary" data-action="share" data-id="${esc(f.id)}">Get link</button><button class="plain" data-action="rename" data-id="${esc(f.id)}">Rename</button><button class="danger" data-action="delete" data-id="${esc(f.id)}">Delete</button></div></div>`;
+    }).join('');
+    $('filelist').querySelectorAll('button[data-action]').forEach(b=>b.onclick=()=>fileAction(b.dataset.action,b.dataset.id));
+  }
+  async function fileAction(action,id){
+    const f=files.find(x=>x.id===id);if(!f)return;
+    try{
+      if(action==='share'){
+        await api(`/files/${encodeURIComponent(id)}/permissions`,{method:'POST',body:JSON.stringify({type:'anyone',role:'reader',allowFileDiscovery:false})}).catch(async e=>{
+          if(!String(e.message).includes('already')) throw e;
+        });
+        const link=`https://drive.google.com/uc?export=download&id=${encodeURIComponent(id)}`;
+        await navigator.clipboard.writeText(link);
+        status('uploadstatus',`Download link copied for ${f.name}\n${link}`,'good');
+      }else if(action==='rename'){
+        const name=prompt('New file name:',f.name);if(!name||!name.trim())return;
+        await api(`/files/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({name:name.trim()})});await refreshFiles();
+      }else if(action==='delete'){
+        if(!confirm(`Move "${f.name}" to Google Drive trash?`))return;
+        await api(`/files/${encodeURIComponent(id)}`,{method:'DELETE'});files=files.filter(x=>x.id!==id);renderFiles();status('uploadstatus',`Moved ${f.name} to Drive trash.`,'good');
+      }
+    }catch(e){status('uploadstatus',e.message,'bad')}
+  }
+  // Warn before leaving while an upload is running.
+  window.addEventListener('beforeunload',e=>{if(busy){e.preventDefault();e.returnValue='Upload in progress';}});
+  setConnected(false);
+  if(savedId)status('configstatus','Client ID loaded from this browser. Sign in when ready.');
+})();
+</script>
+</body>
+</html>
